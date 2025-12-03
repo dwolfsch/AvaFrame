@@ -306,6 +306,7 @@ The result types that can be chosen to be exported are (all correspond to fields
 * FTDet - thickness of detrained mass computed based on dmDet / (rho * area of cell)
 * sfcChange - flow depth that changed the surface topography due to detrainment, stopping and entrainment
 * demAdapted - adapted DEM considering stopping/ detrainment/ entrainment
+* timeInfo - time step at which a cell was first affected by flow
 * particles (:ref:`com1DFAAlgorithm:Particle properties`)
 
 Have a look at the designated subsection Output in ``com1DFA/com1DFACfg.ini``.
