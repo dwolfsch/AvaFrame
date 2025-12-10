@@ -1658,7 +1658,6 @@ def initializeFields(cfg, dem, particles, releaseLine):
     cfgGen = cfg["GENERAL"]
     # what result types are desired as output (we need this to decide which fields we actually need to compute)
     resTypes = fU.splitIniValueToArraySteps(cfgGen["resType"])
-    resTypesLast = resTypes
     # read dem header
     header = dem["header"]
     ncols = header["ncols"]
@@ -1682,7 +1681,7 @@ def initializeFields(cfg, dem, particles, releaseLine):
     fields["demAdapted"] = np.zeros((nrows, ncols))  # adapted topography [m]
     # for optional fields, initialize with dummys (minimum size array). The cython functions then need something
     # even if it is empty to run properly
-    if ("TA" in resTypesLast) or ("pta" in resTypesLast):
+    if ("TA" in resTypes) or ("pta" in resTypes):
         fields["pta"] = np.zeros((nrows, ncols))  # peak travel angle [°]
         fields["TA"] = np.zeros((nrows, ncols))  # travel angle [°]
         fields["computeTA"] = True
@@ -1691,14 +1690,14 @@ def initializeFields(cfg, dem, particles, releaseLine):
         fields["pta"] = np.zeros((1, 1))
         fields["TA"] = np.zeros((1, 1))
         fields["computeTA"] = False
-    if "pke" in resTypesLast:
+    if "pke" in resTypes:
         fields["pke"] = np.zeros((nrows, ncols))  # peak kinetic energy [kJ/m²]
         fields["computeKE"] = True
         log.debug("Computing Kinetic energy")
     else:
         fields["pke"] = np.zeros((1, 1))
         fields["computeKE"] = False
-    if ("P" in resTypesLast) or ("ppr" in resTypesLast):
+    if ("P" in resTypes) or ("ppr" in resTypes):
         fields["P"] = np.zeros((nrows, ncols))  # pressure [kPa]
         fields["ppr"] = np.zeros((nrows, ncols))  # peak pressure [kPa]
         fields["computeP"] = True
@@ -2036,8 +2035,6 @@ def DFAIterate(cfg, particles, fields, dem, inputSimLines, outDir, cuSimName, si
     # add particles to the results type if trackParticles option is activated
     if cfg.getboolean("TRACKPARTICLES", "trackParticles"):
         resTypes = list(set(resTypes + ["particles"]))
-    # use resTypes for all time steps
-    resTypesLast = resTypes
     # derive friction type
     # turn friction model into integer
     frictModelsList = [
@@ -2076,7 +2073,7 @@ def DFAIterate(cfg, particles, fields, dem, inputSimLines, outDir, cuSimName, si
     pfvTimeMax = []
 
     # setup a result fields info data frame to save max values of fields and avalanche front
-    resultsDF = setupresultsDF(resTypesLast, cfg["VISUALISATION"].getboolean("createRangeTimeDiagram"))
+    resultsDF = setupresultsDF(resTypes, cfg["VISUALISATION"].getboolean("createRangeTimeDiagram"))
 
     # Add different time stepping options here
     log.debug("Use standard time stepping")
@@ -2168,7 +2165,7 @@ def DFAIterate(cfg, particles, fields, dem, inputSimLines, outDir, cuSimName, si
             rangeValue = mtiInfo["rangeList"][-1]
         else:
             rangeValue = ""
-        resultsDF = addMaxValuesToDF(resultsDF, fields, t, resTypesLast, rangeValue=rangeValue)
+        resultsDF = addMaxValuesToDF(resultsDF, fields, t, resTypes, rangeValue=rangeValue)
 
         tCPU["nSave"] = nSave
         particles["t"] = t
