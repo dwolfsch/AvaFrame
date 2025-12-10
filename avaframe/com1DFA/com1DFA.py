@@ -1658,6 +1658,11 @@ def initializeFields(cfg, dem, particles, releaseLine):
     cfgGen = cfg["GENERAL"]
     # what result types are desired as output (we need this to decide which fields we actually need to compute)
     resTypes = fU.splitIniValueToArraySteps(cfgGen["resType"])
+    # ensure at least one field type is present for internal computations
+    # if resTypes only contains particles add pfv
+    validFieldTypes = [rt for rt in resTypes if rt not in ["particles"]]
+    if len(validFieldTypes) == 0:
+        resTypes.append("pfv")
     # read dem header
     header = dem["header"]
     ncols = header["ncols"]
@@ -2035,6 +2040,11 @@ def DFAIterate(cfg, particles, fields, dem, inputSimLines, outDir, cuSimName, si
     # add particles to the results type if trackParticles option is activated
     if cfg.getboolean("TRACKPARTICLES", "trackParticles"):
         resTypes = list(set(resTypes + ["particles"]))
+    # ensure at least one field type is present for internal computations
+    # if resTypes only contains particles, add pfv
+    validFieldTypes = [rt for rt in resTypes if rt not in ["particles"]]
+    if len(validFieldTypes) == 0:
+        resTypes.append("pfv")
     # derive friction type
     # turn friction model into integer
     frictModelsList = [
@@ -2348,24 +2358,28 @@ def DFAIterate(cfg, particles, fields, dem, inputSimLines, outDir, cuSimName, si
         if "particles" in resTypes:
             savePartToPickle(particles, outDirData, cuSimName)
     else:
-        # fetch contourline info
+        # fetch contourline info only if the field is properly computed (not a dummy array)
+        contourResType = cfg["VISUALISATION"]["contourResType"]
+        if fields[contourResType].shape != (1, 1):
+            contourDictXY = outCom1DFA.fetchContCoors(
+                dem["header"],
+                fields[contourResType],
+                cfg["VISUALISATION"],
+                cuSimName,
+            )
+
+    # save contour line for each sim only if the field is properly computed (not a dummy array)
+    contourResType = cfg["VISUALISATION"]["contourResType"]
+    if fields[contourResType].shape != (1, 1):
         contourDictXY = outCom1DFA.fetchContCoors(
             dem["header"],
-            fields[cfg["VISUALISATION"]["contourResType"]],
+            fields[contourResType],
             cfg["VISUALISATION"],
             cuSimName,
         )
-
-    # save contour line for each sim
-    contourDictXY = outCom1DFA.fetchContCoors(
-        dem["header"],
-        fields[cfg["VISUALISATION"]["contourResType"]],
-        cfg["VISUALISATION"],
-        cuSimName,
-    )
-    outDirDataCont = outDir / "contours"
-    fU.makeADir(outDirDataCont)
-    saveContToPickle(contourDictXY, outDirDataCont, cuSimName)
+        outDirDataCont = outDir / "contours"
+        fU.makeADir(outDirDataCont)
+        saveContToPickle(contourDictXY, outDirDataCont, cuSimName)
 
     # export particles properties for visulation
     if cfg["VISUALISATION"].getboolean("writePartToCSV"):
@@ -2444,7 +2458,10 @@ def addMaxValuesToDF(resultsDF, fields, timeStep, resTypes, rangeValue=""):
 
     if rangeValue != "":
         newLine.append(rangeValue)
-    resultsDF.loc[timeStep] = newLine
+
+    # Only add row if DataFrame has columns to populate
+    if len(resultsDF.columns) > 0:
+        resultsDF.loc[timeStep] = newLine
 
     return resultsDF
 
@@ -2973,6 +2990,11 @@ def exportFields(
         resTypesGen.remove("particles")
 
     resTypes = resTypesGen
+    # ensure at least one field type is present for export
+    # if resTypes only contains FTDet or is empty, add pfv
+    validFieldTypes = [rt for rt in resTypes if rt != "FTDet"]
+    if len(validFieldTypes) == 0:
+        resTypes.append("pfv")
 
     if resTypesForced != []:
         resTypes = resTypesForced
