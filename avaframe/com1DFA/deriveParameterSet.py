@@ -419,7 +419,7 @@ def checkThicknessSettings(cfg, thName, inputSimFiles):
             and inputSimFiles["entResInfo"]["flag" + nameTypes[thName]] == "Yes"
         ):
             message = "If %s input file is of type .asc or .tif - %s needs to be set to True" % (
-                thName,
+                nameStrings[thName],
                 thFlag,
             )
             log.error(message)
