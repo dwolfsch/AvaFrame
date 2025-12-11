@@ -3574,7 +3574,6 @@ def initializeRelVol(cfg, demVol, releaseFile, radius, releaseType="primary"):
 
         # compute release volume using raster and dem area
         relVolume = np.nansum(releaseLine["rasterData"] * demVol["areaRaster"])
-    # TODO: does it make sense to return releaseLine? Since the dictionary is changed here?
     return relVolume
 
 
