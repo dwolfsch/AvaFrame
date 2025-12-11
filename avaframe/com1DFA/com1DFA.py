@@ -479,9 +479,8 @@ def prepareReleaseEntrainment(cfg, rel, inputSimLines):
 
     # set release thickness
 
-    if cfg["GENERAL"].getboolean("hydrograph") and cfg["GENERAL"].getboolean("noRelArea"):
-        inputSimLines["hydrographAreaLine"]["thicknessSource"] = ["csv file"]
-        log.info("Release scenario with hydrograph and without REL area.")
+    if cfg["GENERAL"].getboolean("timeDependentRelease"):
+        inputSimLines["releaseLine"]["thicknessSource"] = ["csv file"]
     elif cfg["INPUT"]["relThFile"] == "":
         releaseLine = setThickness(cfg, inputSimLines["releaseLine"], "relTh")
         inputSimLines["releaseLine"] = releaseLine
@@ -538,14 +537,14 @@ def setThickness(cfg, lineTh, typeTh):
             lineTh["thicknessSource"] = ["ini file"] * len(lineTh["thickness"])
         else:
             lineTh["thicknessSource"] = ["shp file"] * len(lineTh["thickness"])
-    elif cfg["GENERAL"].getboolean("hydrograph") and cfg["GENERAL"].getboolean("noRelArea"):
+    elif cfg["GENERAL"].getboolean("timeDependentRelease"):
         lineTh["thicknessSource"] = ["csv file"] * len(lineTh["thickness"])
     else:
         lineTh["thicknessSource"] = ["ini file"] * len(lineTh["thickness"])
 
     # set thickness value info read from ini file that has been updated from shp or ini previously
     for count, id in enumerate(lineTh["id"]):
-        if cfg["GENERAL"].getboolean("hydrograph") and cfg["GENERAL"].getboolean("noRelArea"):
+        if cfg["GENERAL"].getboolean("timeDependentRelease"):
             lineTh["thickness"][count] = float(lineTh["thickness"][count])
 
         elif cfg["GENERAL"].getboolean(thFlag):
@@ -572,8 +571,7 @@ def prepareInputData(inputSimFiles, cfg):
         - secondaryRelFile : str, path to secondaryRelease file
         - entFiles : str, path to entrainment file
         - resFile : str, path to resistance file
-        - hydrographFile: str, path to hydrograph polygon file
-        - hydrographCsv: str, path to hydrograph values (csv-)file
+        - timeDepRelCsv: str, path to time dependent release values (csv-)file
         - entResInfo : flag dict
         flag if Yes entrainment and/or resistance areas found and used for simulation
         flag True if a Secondary Release file found and activated
@@ -597,7 +595,6 @@ def prepareInputData(inputSimFiles, cfg):
         - resLine : dict, resistance line dictionary
         - entrainmentArea : str, entrainment file name
         - resistanceArea : str, resistance file name
-        - hydrographAreaLine: dict, hydrograph line dictionary
         - entResInfo : flag dict
         flag if Yes entrainment and/or resistance areas found and used for simulation
         flag True if a Secondary Release file found and activated
@@ -641,15 +638,14 @@ def prepareInputData(inputSimFiles, cfg):
         releaseLine["thickness"] = "from raster"
         log.info("Set %s for relThField" % relRasterPath)
     # get line from release area polygon
-    if cfg["GENERAL"].getboolean("hydrograph") and cfg["GENERAL"].getboolean("noRelArea"):
-        releaseLine["type"] = "Hydrograph"
-        hydrValues = gI.getHydrographCsv(inputSimFiles["hydrographCsv"])
-        releaseLine["thickness"] = [hydrValues["thickness"][hydrValues["timeStep"] == 0]]
+
+    if cfg["GENERAL"].getboolean("timeDependentRelease"):
+        releaseLine["type"] = "time dependent Release"
+        timeDepRelValues = gI.getTimeDepRelCsv(inputSimFiles["timeDepRelCsv"])
+        releaseLine["thickness"] = [timeDepRelValues["thickness"][timeDepRelValues["timeStep"] == 0]]
         releaseLine["thicknessSource"] = ["csv file"]
-        releaseLine["velocity"] = hydrValues["velocity"][hydrValues["timeStep"] == 0]
-        gI.checkForMultiplePartsShpArea(
-            cfg["GENERAL"]["avalancheDir"], releaseLine, "com1DFA", type="release"
-        )
+        releaseLine["velocity"] = timeDepRelValues["velocity"][timeDepRelValues["timeStep"] == 0]
+        releaseLine["timeDepRelValues"] = timeDepRelValues
 
     # get line from secondary release area polygon
     if cfg["GENERAL"].getboolean("secRelArea"):
@@ -764,10 +760,8 @@ def prepareInputData(inputSimFiles, cfg):
     else:
         damLine = None
 
-    if cfg["GENERAL"].getboolean("hydrograph"):
-        hydrLine = debF.preparehydrographAreaLine(inputSimFiles, demOri, cfg)
-    else:
-        hydrLine = None
+    if cfg["GENERAL"].getboolean("timeDependentRelease"):
+        releaseLine = debF.prepareTimeDepRelLine(inputSimFiles, releaseLine, cfg)
 
     inputSimLines = {
         "releaseLine": releaseLine,
@@ -784,7 +778,6 @@ def prepareInputData(inputSimFiles, cfg):
         "xiFile": inputSimFiles["xiFile"],
         "kFile": inputSimFiles["kFile"],
         "tauCFile": inputSimFiles["tauCFile"],
-        "hydrographAreaLine": hydrLine,
     }
 
     return demOri, inputSimLines
@@ -1233,7 +1226,7 @@ def initializeSimulation(cfg, outDir, demOri, inputSimLines, logName):
         logName=logName,
         relThField=relThField,
     )
-    if cfgGen.getboolean("hydrograph") and cfgGen.getboolean("noRelArea"):
+    if cfgGen.getboolean("timeDependentRelease"):
         particles = DFAfunC.updateInitialVelocity(cfgGen, particles, dem, releaseLine["velocity"])
     particles, fields = initializeFields(cfg, dem, particles, releaseLine)
 
@@ -1643,7 +1636,7 @@ def getRelThFromPart(cfg, releaseLine, relThField, thName):
 
     if len(relThField) != 0:
         relThForPart = np.amax(relThField)
-    elif releaseLine["type"] == "Hydrograph":
+    elif cfg.getboolean("timeDependentRelease"):
         relThForPart = releaseLine["thickness"]
     elif cfg.getboolean("%sThFromFile" % thName):
         relThForPart = np.amax(np.asarray(releaseLine["thickness"], dtype=float))
@@ -2164,8 +2157,8 @@ def DFAIterate(cfg, particles, fields, dem, inputSimLines, outDir, cuSimName, si
         startTime = time.time()
         log.debug("Computing time step t = %f s, dt = %f s" % (t, dt))
 
-        if cfgGen.getboolean("hydrograph"):
-            particles, fields, zPartArray0 = debF.releaseHydrograph(
+        if cfgGen.getboolean("timeDependentRelease"):
+            particles, fields, zPartArray0 = debF.initializeTimeDepRelease(
                 cfg, inputSimLines, particles, fields, dem, zPartArray0, t
             )
         # Perform computations
@@ -3493,8 +3486,8 @@ def fetchRelVolume(releaseFile, cfg, pathToDem, secondaryReleaseFile, radius=0.0
     demVol = geoTrans.getNormalMesh(demVol, num=methodMeshNormal)
     demVol = DFAtls.getAreaMesh(demVol, methodMeshNormal)
 
-    if cfg["GENERAL"].getboolean("hydrograph") and cfg["GENERAL"].getboolean("noRelArea"):
-        relVolume = initializeRelVol(cfg, demVol, releaseFile, radius, releaseType="hydrograph")
+    if cfg["GENERAL"].getboolean("timeDependentRelease"):
+        relVolume = initializeRelVol(cfg, demVol, releaseFile, radius, releaseType="timeDepRel")
     else:
         # compute volume of release area
         relVolume = initializeRelVol(cfg, demVol, releaseFile, radius, releaseType="primary")
@@ -3542,10 +3535,8 @@ def initializeRelVol(cfg, demVol, releaseFile, radius, releaseType="primary"):
 
     """
 
-    if releaseType == "primary":
+    if releaseType in ["primary", "timeDepRel"]:
         typeTh = "relTh"
-    elif releaseType == "hydrograph":
-        typeTh = "hydrTh"
     else:
         typeTh = "secondaryRelTh"
 
