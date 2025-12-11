@@ -10,7 +10,6 @@ import matplotlib
 matplotlib.use("agg")
 from matplotlib import pyplot as plt
 import pathlib
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import avaframe.out3Plot.plotUtils as pU
 import avaframe.in1Data.getInput as gI
