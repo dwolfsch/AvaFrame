@@ -2097,13 +2097,16 @@ def DFAIterate(cfg, particles, fields, dem, inputSimLines, outDir, cuSimName, si
     t = particles["t"]
     log.debug("Saving results for time step t = %f s", t)
 
+    # Initialize particles output directory if needed
+    if "particles" in resTypes:
+        outDirData = outDir / "particles"
+        fU.makeADir(outDirData)
+
     # export initial time step only if t=0 is explicitly in dtSave
     if cfg["EXPORTS"].getboolean("exportData") and (dtSave.size > 0 and dtSave[0] <= 1.0e-8):
         exportFields(cfg, t, fields, dem, outDir, cuSimName, TSave="initial")
 
         if "particles" in resTypes:
-            outDirData = outDir / "particles"
-            fU.makeADir(outDirData)
             savePartToPickle(particles, outDirData, cuSimName)
 
         # Update dtSave to remove the initial timestep we just saved
