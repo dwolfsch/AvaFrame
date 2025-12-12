@@ -2983,3 +2983,31 @@ def test_tSteps_output_behavior(tmp_path, caplog):
     assert timeStepsDir2.exists(), "timeSteps directory should exist"
     tStepFiles2 = list(timeStepsDir2.glob("*_t0.0*.asc"))
     assert len(tStepFiles2) > 0, "Should have initial timestep files at t=0 when tSteps includes 0"
+
+    # Test 3: exportData = False should trigger contour fetching in else block
+    avaDir3 = pathlib.Path(tmp_path, "testExportDataFalse")
+    shutil.copytree(inputDir, avaDir3)
+    cfgFile3 = avaDir3 / "test_com1DFACfg.ini"
+
+    cfgMain['MAIN']['avalancheDir'] = str(avaDir3)
+
+    # Modify config to have exportData = False
+    cfg3 = cfgUtils.getModuleConfig(com1DFA, cfgFile3)
+    cfg3["GENERAL"]["tSteps"] = ""
+    cfg3["GENERAL"]["tEnd"] = "5"  # Very short simulation
+    cfg3["GENERAL"]["dt"] = "0.1"
+    cfg3["GENERAL"]["simTypeList"] = "null"
+    cfg3["EXPORTS"]["exportData"] = "False"  # Key setting to test else block
+    with open(cfgFile3, "w") as f:
+        cfg3.write(f)
+
+    dem3, plotDict3, reportDictList3, simDF3 = com1DFA.com1DFAMain(cfgMain, cfgInfo=cfgFile3)
+
+    # Check that contour data was generated (stored in reportDict) instead of exported files
+    assert len(reportDictList3) > 0, "Should have report dict even with exportData=False"
+    # Verify that timeSteps directory doesn't exist (no data exported)
+    timeStepsDir3 = avaDir3 / "Outputs" / "com1DFA" / "peakFiles" / "timeSteps"
+    if timeStepsDir3.exists():
+        tStepFiles3 = list(timeStepsDir3.glob("*.asc"))
+        # With exportData=False, intermediate timesteps should not be exported
+        assert len(tStepFiles3) == 0, "No timestep files should be exported when exportData=False"
