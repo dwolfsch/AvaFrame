@@ -1965,7 +1965,6 @@ def test_prepareVarSimDict(tmp_path, caplog):
         "simTypeActual": "entres",
         "secRelArea": "False",
         "relThFromFile": "False",
-        "relThFromFile": "False",
         "entThFromFile": "True",
         "entThPercentVariation": "",
         "relThPercentVariation": "",
@@ -1989,8 +1988,7 @@ def test_prepareVarSimDict(tmp_path, caplog):
         "xsivoellmy": "4000.",
         "dam": "True",
         "explicitFriction": 0,
-        "hydrograph": "False",
-        "noRelArea": "False",
+        "timeDependentRelease": "False",
     }
     standardCfg["INPUT"] = {
         "entThThickness": "1.",
@@ -2037,7 +2035,6 @@ def test_prepareVarSimDict(tmp_path, caplog):
         "modelType": "dfa",
         "simTypeActual": "entres",
         "secRelArea": "False",
-        "relThFromFile": "False",
         "relThFromFile": "False",
         "entThFromFile": "True",
         "entThPercentVariation": "",
@@ -2148,7 +2145,6 @@ def test_prepareVarSimDict(tmp_path, caplog):
         "secRelArea": "False",
         "relThFromFile": "False",
         "entThFromFile": "True",
-        "relThFromFile": "False",
         "entThPercentVariation": "",
         "relThPercentVariation": "",
         "entThRangeFromCiVariation": "",
@@ -2381,7 +2377,6 @@ def test_initializeSimulation(tmp_path):
         "rasterData": relThField,
     }
 
-    cfg["GENERAL"]["relThFromFile"] = "False"
     cfg["GENERAL"]["relTh"] = ""
     cfg["GENERAL"]["relThFromFile"] = "True"
     inputSimLines["relThField"] = relThField

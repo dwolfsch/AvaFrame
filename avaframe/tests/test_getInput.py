@@ -405,8 +405,7 @@ def test_fetchReleaseFile(tmp_path):
     cfg["INPUT"] = {"releaseScenario": "rel1"}
     cfg["GENERAL"] = {
         "relThFromFile": False,
-        "hydrograph": "False",
-        "noRelArea": "False",
+        "timeDependentRelease": "False",
     }
     releaseScenario = "rel1"
     releaseList = ["rel1", "rel2"]
@@ -425,8 +424,7 @@ def test_fetchReleaseFile(tmp_path):
     inputSimFiles = {"relFiles": [rel1, rel2]}
     cfg["GENERAL"] = {
         "relThFromFile": True,
-        "hydrograph": "False",
-        "noRelArea": "False",
+        "timeDependentRelease": "False",
     }
     cfg["INPUT"] = {
         "rel2_relThId": "0",
@@ -1427,8 +1425,7 @@ def test_fetchReleaseFile_scenario_not_found():
     cfg["INPUT"] = {"releaseScenario": "relNONEXISTENT"}
     cfg["GENERAL"] = {
         "relThFromFile": "False",
-        "hydrograph": "False",
-        "noRelArea": "False",
+        "timeDependentRelease": "False",
     }
     releaseScenario = "relNONEXISTENT"
     releaseList = ["rel1", "rel2"]
@@ -1462,8 +1459,7 @@ def test_fetchReleaseFile_multiple_files_same_name():
     }
     cfg["GENERAL"] = {
         "relThFromFile": "True",
-        "hydrograph": "False",
-        "noRelArea": "False",
+        "timeDependentRelease": "False",
     }
     releaseScenario = "release1"
     releaseList = ["release1", "release2"]
@@ -1496,8 +1492,7 @@ def test_fetchReleaseFile_no_matching_thickness_file():
     }
     cfg["GENERAL"] = {
         "relThFromFile": "True",
-        "hydrograph": "False",
-        "noRelArea": "False",
+        "timeDependentRelease": "False",
     }
     releaseScenario = "release2"
     releaseList = ["release2"]
@@ -1531,8 +1526,7 @@ def test_fetchReleaseFile_no_matching_thickness_file():
     cfg["INPUT"] = {"releaseScenario": "release1"}
     cfg["GENERAL"] = {
         "relThFromFile": "False",
-        "hydrograph": "False",
-        "noRelArea": "False",
+        "timeDependentRelease": "False",
     }
     releaseScenario = "release1"
     releaseList = ["release1"]
